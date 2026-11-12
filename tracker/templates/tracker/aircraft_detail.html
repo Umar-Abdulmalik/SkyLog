@@ -1,0 +1,28 @@
+{% extends "tracker/app.html" %}
+
+{% block title %}{{ aircraft.registration }}{% endblock %}
+
+{% block content %}
+<p class="crumbs"><a href="{% url 'aircraft_list' %}">&larr; All aircraft</a></p>
+
+<header class="page-head head-row">
+  <div>
+    <h1>{{ aircraft.registration }}</h1>
+    <p>
+      {{ aircraft.aircraft_type }} &middot; {{ aircraft.total_hours }} flight hours
+      <span class="badge badge-{{ aircraft.status }}">{{ aircraft.get_status_display }}</span>
+    </p>
+  </div>
+  {% if user.is_authenticated %}
+  <div class="head-actions">
+    <a class="btn-app" href="{% url 'task_create' %}?aircraft={{ aircraft.pk }}">Add task</a>
+    <a class="btn-app btn-quiet" href="{% url 'aircraft_edit' aircraft.pk %}">Edit aircraft</a>
+  </div>
+  {% endif %}
+</header>
+
+<section class="panel">
+  <h2>Maintenance tasks</h2>
+  {% include "tracker/_task_table.html" with tasks=tasks show_aircraft=False %}
+</section>
+{% endblock %}

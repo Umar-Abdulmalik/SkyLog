@@ -1,0 +1,35 @@
+{% extends "tracker/app.html" %}
+
+{% block title %}Tasks{% endblock %}
+
+{% block content %}
+<header class="page-head head-row">
+  <div>
+    <h1>Tasks</h1>
+    <p>Search and filter maintenance work across the fleet.</p>
+  </div>
+  {% if user.is_authenticated %}<a class="btn-app" href="{% url 'task_create' %}">Add task</a>{% endif %}
+</header>
+
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ query }}" placeholder="Search by task or registration">
+  <select name="status" aria-label="Status">
+    <option value="">All statuses</option>
+    {% for value, label in status_choices %}
+    <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="priority" aria-label="Priority">
+    <option value="">All priorities</option>
+    {% for value, label in priority_choices %}
+    <option value="{{ value }}" {% if value == priority %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Filter</button>
+  <a class="clear" href="{% url 'task_list' %}">Clear</a>
+</form>
+
+<section class="panel">
+  {% include "tracker/_task_table.html" with tasks=tasks show_aircraft=True %}
+</section>
+{% endblock %}

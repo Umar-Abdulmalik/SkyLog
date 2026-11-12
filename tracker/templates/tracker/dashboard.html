@@ -1,0 +1,75 @@
+{% extends "tracker/app.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<section class="banner">
+  <div>
+    <p class="banner-date">{% now "l, j F Y" %}</p>
+    <h1><span data-greeting>Welcome back</span>, Umar</h1>
+    <p class="banner-msg">
+      {% if overdue_count %}
+      <span class="alert-dot" aria-hidden="true"></span>
+      {{ overdue_count }} maintenance task{{ overdue_count|pluralize }} overdue. Check the list below.
+      {% else %}
+      All maintenance is on schedule.
+      {% endif %}
+    </p>
+  </div>
+  <svg class="banner-plane" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M32 2c2 0 3 4 3 8v14l27 14v6L35 36v14l7 6v4l-10-3-10 3v-4l7-6V36L2 44v-6l27-14V10c0-4 1-8 3-8z"/></svg>
+</section>
+
+<section class="stats reveal">
+  <div class="stat tilt">
+    <span class="stat-label">Aircraft</span>
+    <span class="stat-value" data-count="{{ total_aircraft }}">{{ total_aircraft }}</span>
+  </div>
+  <div class="stat stat-good tilt">
+    <span class="stat-label">Serviceable</span>
+    <span class="stat-value" data-count="{{ serviceable }}">{{ serviceable }}</span>
+  </div>
+  <div class="stat tilt">
+    <span class="stat-label">Open tasks</span>
+    <span class="stat-value" data-count="{{ open_count }}">{{ open_count }}</span>
+  </div>
+  <div class="stat {% if overdue_count %}stat-alert{% endif %} tilt">
+    <span class="stat-label">Overdue</span>
+    <span class="stat-value" data-count="{{ overdue_count }}">{{ overdue_count }}</span>
+  </div>
+</section>
+
+<section class="grid-2 reveal">
+  <div class="panel">
+    <h2>Fleet status</h2>
+    <div class="donut-wrap">
+      <div class="donut" style="--donut-gradient: {{ donut }}; background: var(--donut-gradient);">
+        <span class="donut-total">{{ total_aircraft }}<small>aircraft</small></span>
+      </div>
+      <ul class="legend">
+        {% for row in fleet_rows %}
+        <li><span class="sw fill-{{ row.value }}"></span>{{ row.label }}<b>{{ row.count }}</b></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Open tasks by priority</h2>
+    {% for row in priority_rows %}
+    <div class="bar-row">
+      <span class="bar-label">{{ row.label }}</span>
+      <div class="bar-track"><div class="bar-fill fill-{{ row.value }}" style="--bar-percent: {{ row.percent }}%; width: var(--bar-percent)"></div></div>
+      <span class="bar-count">{{ row.count }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel reveal">
+  <div class="panel-head">
+    <h2>Next due</h2>
+    <a href="{% url 'task_list' %}">View all tasks</a>
+  </div>
+  {% include "tracker/_task_table.html" with tasks=upcoming show_aircraft=True %}
+</section>
+{% endblock %}

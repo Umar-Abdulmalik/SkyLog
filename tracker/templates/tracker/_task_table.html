@@ -1,0 +1,35 @@
+{% if tasks %}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Task</th>
+        {% if show_aircraft %}<th>Aircraft</th>{% endif %}
+        <th>Priority</th>
+        <th>Status</th>
+        <th>Due</th>
+        {% if user.is_authenticated %}<th></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for task in tasks %}
+      <tr class="{% if task.is_overdue %}overdue{% endif %}">
+        <td>{{ task.title }}</td>
+        {% if show_aircraft %}
+        <td><a href="{% url 'aircraft_detail' task.aircraft.pk %}">{{ task.aircraft.registration }}</a></td>
+        {% endif %}
+        <td><span class="badge badge-{{ task.priority }}">{{ task.get_priority_display }}</span></td>
+        <td><span class="badge badge-{{ task.status }}">{{ task.get_status_display }}</span></td>
+        <td>
+          {{ task.due_date|date:"d M Y" }}
+          {% if task.is_overdue %}<span class="badge badge-overdue">Overdue</span>{% endif %}
+        </td>
+        {% if user.is_authenticated %}<td><a href="{% url 'task_edit' task.pk %}">Edit</a></td>{% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty">No tasks found.</p>
+{% endif %}

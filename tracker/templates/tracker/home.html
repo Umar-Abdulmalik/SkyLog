@@ -1,0 +1,75 @@
+{% extends "tracker/base.html" %}
+
+{% block body %}
+<header class="hero">
+  <div class="wrap">
+    <nav class="site-nav" aria-label="Main">
+      <a class="logo" href="{% url 'home' %}"><svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M32 2c2 0 3 4 3 8v14l27 14v6L35 36v14l7 6v4l-10-3-10 3v-4l7-6V36L2 44v-6l27-14V10c0-4 1-8 3-8z"/></svg> SkyLog</a>
+      <div class="site-nav-links">
+        <a class="nav-extra" href="#features">Features</a>
+        <a class="nav-extra" href="{% url 'aircraft_list' %}">Aircraft</a>
+        <button class="theme-toggle" type="button" aria-label="Switch colour theme">Dark mode</button>
+        <a class="btn btn-yellow nav-extra" href="{% url 'dashboard' %}">Open dashboard</a>
+      </div>
+    </nav>
+
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">Aircraft maintenance tracker</p>
+        <h1>Keep every aircraft <span class="hl">airworthy.</span></h1>
+        <p class="hero-lead">
+          SkyLog tracks your fleet, schedules maintenance, and flags overdue
+          work before it becomes a problem.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-yellow" href="{% url 'dashboard' %}">Open dashboard</a>
+          <a class="btn btn-ghost" href="{% url 'aircraft_list' %}">Browse aircraft</a>
+        </div>
+        <dl class="hero-stats">
+          <div><dt>Aircraft</dt><dd data-count="{{ total_aircraft }}">{{ total_aircraft }}</dd></div>
+          <div><dt>Open tasks</dt><dd data-count="{{ open_count }}">{{ open_count }}</dd></div>
+          <div><dt>Overdue</dt><dd data-count="{{ overdue_count }}">{{ overdue_count }}</dd></div>
+        </dl>
+      </div>
+
+      <div class="radar" role="img" aria-label="Radar scope showing aircraft in the fleet">
+        {% for a in radar_aircraft %}
+        <span class="blip blip-{{ forloop.counter }} dot-{{ a.status }}"><i></i>{{ a.registration }}</span>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section id="features" class="wrap section">
+    <h2 class="section-title">Everything you need to stay on top of maintenance</h2>
+    <div class="features reveal">
+      <article class="feature tilt">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M2 12l20-8-6 16-4-6-10-2z"/></svg></span>
+        <h3>Track your fleet</h3>
+        <p>Registration, type, flight hours and status for every aircraft, in one place.</p>
+      </article>
+      <article class="feature tilt">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <h3>Never miss a deadline</h3>
+        <p>Overdue work is highlighted in red the moment a due date passes.</p>
+      </article>
+      <article class="feature tilt">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg></span>
+        <h3>See fleet health</h3>
+        <p>A live dashboard shows what is serviceable, what is in the hangar, and what needs attention.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="wrap cta reveal">
+    <h2>Ready to see your fleet?</h2>
+    <a class="btn btn-yellow" href="{% url 'dashboard' %}">Open dashboard</a>
+  </section>
+</main>
+
+<footer class="site-footer wrap">
+  <p>&copy; 2026 SkyLog. Built with Django by <a href="https://github.com/Umar-Abdulmalik">Umar Abdulmalik</a>.</p>
+</footer>
+{% endblock %}

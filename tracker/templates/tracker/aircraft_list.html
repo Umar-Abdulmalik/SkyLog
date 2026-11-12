@@ -1,0 +1,31 @@
+{% extends "tracker/app.html" %}
+
+{% block title %}Aircraft{% endblock %}
+
+{% block content %}
+<header class="page-head head-row">
+  <div>
+    <h1>Aircraft</h1>
+    <p>Every aircraft in the fleet and its open maintenance work.</p>
+  </div>
+  {% if user.is_authenticated %}<a class="btn-app" href="{% url 'aircraft_create' %}">Add aircraft</a>{% endif %}
+</header>
+
+{% if aircraft_list %}
+<section class="cards reveal">
+  {% for aircraft in aircraft_list %}
+  <a class="card tilt" href="{% url 'aircraft_detail' aircraft.pk %}">
+    <span class="card-reg">{{ aircraft.registration }}</span>
+    <span class="card-type">{{ aircraft.aircraft_type }}</span>
+    <span class="badge badge-{{ aircraft.status }}">{{ aircraft.get_status_display }}</span>
+    <dl class="card-facts">
+      <div><dt>Hours</dt><dd>{{ aircraft.total_hours }}</dd></div>
+      <div><dt>Open tasks</dt><dd>{{ aircraft.open_tasks }}</dd></div>
+    </dl>
+  </a>
+  {% endfor %}
+</section>
+{% else %}
+<p class="empty">No aircraft yet.{% if user.is_authenticated %} <a href="{% url 'aircraft_create' %}">Add the first one</a>.{% endif %}</p>
+{% endif %}
+{% endblock %}

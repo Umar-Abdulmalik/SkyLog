@@ -1,0 +1,33 @@
+{% extends "tracker/base.html" %}
+
+{% block body %}
+<div class="layout">
+  <aside class="sidebar">
+    <a class="logo" href="{% url 'home' %}"><svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M32 2c2 0 3 4 3 8v14l27 14v6L35 36v14l7 6v4l-10-3-10 3v-4l7-6V36L2 44v-6l27-14V10c0-4 1-8 3-8z"/></svg> SkyLog</a>
+    <nav>
+      <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Dashboard</a>
+      <a href="{% url 'aircraft_list' %}" class="{% if request.resolver_match.url_name == 'aircraft_list' or request.resolver_match.url_name == 'aircraft_detail' %}active{% endif %}">Aircraft</a>
+      <a href="{% url 'task_list' %}" class="{% if request.resolver_match.url_name == 'task_list' %}active{% endif %}">Tasks</a>
+      {% if user.is_staff %}<a href="/admin/">Admin</a>{% endif %}
+    </nav>
+    <button class="theme-toggle" type="button" aria-label="Switch colour theme">Dark mode</button>
+    {% if user.is_authenticated %}
+    <form method="post" action="{% url 'logout' %}" class="logout-form">
+      {% csrf_token %}
+      <button class="logout-btn" type="submit">Log out ({{ user.get_username }})</button>
+    </form>
+    {% else %}
+    <a class="login-link" href="{% url 'login' %}">Log in to edit</a>
+    {% endif %}
+    <p class="sidebar-foot">Aircraft maintenance tracker</p>
+  </aside>
+  <main class="content">
+    {% if messages %}
+    <div class="messages">
+      {% for message in messages %}<div class="message" role="status">{{ message }}</div>{% endfor %}
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}

@@ -15,6 +15,8 @@ login-protected editor for adding and updating records.
 - Login required for any change. Visitors can browse but not edit
 - Light and dark mode, and a layout that works on phones
 - 22 automated tests
+![Home page](docs/home.png)
+![Dashboard](docs/dashboard.png)
 
 ## Tech stack
 

@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -175,3 +176,12 @@ class EditingTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.post(reverse("logout"))
         self.assertRedirects(response, reverse("home"))
+
+
+class SeedDemoTests(TestCase):
+    def test_seed_demo_adds_sample_data_once(self):
+        call_command("seed_demo", verbosity=0)
+        self.assertEqual(Aircraft.objects.count(), 4)
+        self.assertEqual(MaintenanceTask.objects.count(), 8)
+        call_command("seed_demo", verbosity=0)
+        self.assertEqual(Aircraft.objects.count(), 4)

@@ -10,7 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +23,31 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-8o&xor(%!32x7ou!&vwo_zuusbq=(k33ew4ka)^xd3^6*cg11a'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = []
+# Settings that change between your laptop and the live website.
+# On the live server these come from environment variables, so no secrets
+# are ever stored in the code on GitHub.
+PRODUCTION = os.environ.get("DJANGO_ENV") == "production"
+DEBUG = not PRODUCTION
+
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY", "django-insecure-local-development-key-do-not-use-online"
+)
+if PRODUCTION and SECRET_KEY.startswith("django-insecure"):
+    raise ImproperlyConfigured("Set DJANGO_SECRET_KEY before running in production.")
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+]
+CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS]
+
+# Only send login cookies over HTTPS on the live site
+SESSION_COOKIE_SECURE = PRODUCTION
+CSRF_COOKIE_SECURE = PRODUCTION
 
 
 # Application definition
@@ -116,6 +138,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # where collectstatic gathers files for the server
 
 
 # Email

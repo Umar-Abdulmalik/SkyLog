@@ -42,7 +42,7 @@
   <div class="panel">
     <h2>Fleet status</h2>
     <div class="donut-wrap">
-      <div class="donut" style="--donut-gradient: {{ donut }}; background: var(--donut-gradient);">
+      <div class="donut" style="background: {{ donut }}">
         <span class="donut-total">{{ total_aircraft }}<small>aircraft</small></span>
       </div>
       <ul class="legend">
@@ -58,7 +58,7 @@
     {% for row in priority_rows %}
     <div class="bar-row">
       <span class="bar-label">{{ row.label }}</span>
-      <div class="bar-track"><div class="bar-fill fill-{{ row.value }}" style="--bar-percent: {{ row.percent }}%; width: var(--bar-percent)"></div></div>
+      <div class="bar-track"><div class="bar-fill fill-{{ row.value }}" style="width: {{ row.percent }}%"></div></div>
       <span class="bar-count">{{ row.count }}</span>
     </div>
     {% endfor %}

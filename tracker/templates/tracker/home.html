@@ -7,6 +7,7 @@
       <a class="logo" href="{% url 'home' %}"><svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M32 2c2 0 3 4 3 8v14l27 14v6L35 36v14l7 6v4l-10-3-10 3v-4l7-6V36L2 44v-6l27-14V10c0-4 1-8 3-8z"/></svg> SkyLog</a>
       <div class="site-nav-links">
         <a class="nav-extra" href="#features">Features</a>
+        <a class="nav-extra" href="{% url 'live_map' %}">Live map</a>
         <a class="nav-extra" href="{% url 'aircraft_list' %}">Aircraft</a>
         <button class="theme-toggle" type="button" aria-label="Switch colour theme">Dark mode</button>
         <a class="btn btn-yellow nav-extra" href="{% url 'dashboard' %}">Open dashboard</a>
@@ -59,6 +60,11 @@
         <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg></span>
         <h3>See fleet health</h3>
         <p>A live dashboard shows what is serviceable, what is in the hangar, and what needs attention.</p>
+      </article>
+      <article class="feature tilt">
+        <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
+        <h3>Watch aircraft live</h3>
+        <p>A real-time map shows traffic in the air, with your own fleet highlighted.</p>
       </article>
     </div>
   </section>

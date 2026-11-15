@@ -1,12 +1,17 @@
+import math
+
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Count, Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, UpdateView
 
+from . import live
 from .forms import AircraftForm, TaskForm
 from .models import Aircraft, MaintenanceTask
 
@@ -227,3 +232,72 @@ class TaskDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     template_name = "tracker/confirm_delete.html"
     success_url = reverse_lazy("task_list")
     success_message = "Task deleted."
+
+
+# ---------------------------------------------------------------------------
+# Live aircraft map
+# ---------------------------------------------------------------------------
+
+
+def live_map(request):
+    context = {
+        "tile_url": settings.MAP_TILE_URL,
+        "tile_attribution": settings.MAP_TILE_ATTRIBUTION,
+        "data_attribution": settings.AIRCRAFT_ATTRIBUTION,
+        "center_lat": 9.1,
+        "center_lon": 8.0,
+        "start_zoom": 7,
+    }
+    return render(request, "tracker/map.html", context)
+
+
+def _fleet_rows():
+    aircraft = Aircraft.objects.annotate(
+        open_tasks=Count("tasks", filter=~Q(tasks__status=MaintenanceTask.Status.DONE))
+    )
+    return [
+        {
+            "id": item.pk,
+            "registration": item.registration,
+            "type": item.aircraft_type,
+            "status": item.status,
+            "status_label": item.get_status_display(),
+            "open_tasks": item.open_tasks,
+        }
+        for item in aircraft
+    ]
+
+
+def aircraft_feed(request):
+    """JSON for the live map: traffic in the visible area plus the whole fleet."""
+    try:
+        south, west, north, east = (
+            float(request.GET[name]) for name in ("south", "west", "north", "east")
+        )
+    except (KeyError, ValueError):
+        return JsonResponse(
+            {"error": "bad_request", "message": "south, west, north and east must be numbers."},
+            status=400,
+        )
+    if not all(math.isfinite(value) for value in (south, west, north, east)):
+        return JsonResponse({"error": "bad_request", "message": "Invalid coordinates."}, status=400)
+
+    south, north = max(-85.0, south), min(85.0, north)
+    west, east = max(-179.999, west), min(179.999, east)
+    if south >= north or west >= east:
+        return JsonResponse({"error": "bad_request", "message": "Invalid map area."}, status=400)
+
+    try:
+        payload = live.get_feed((south, west, north, east), _fleet_rows())
+    except live.TooManyCells:
+        return JsonResponse(
+            {"error": "zoom_in", "message": "Zoom in to see aircraft."}, status=422
+        )
+    except live.FeedError:
+        return JsonResponse(
+            {"error": "feed_unavailable", "message": "The live data feed is not reachable right now."},
+            status=502,
+        )
+    response = JsonResponse(payload)
+    response["Cache-Control"] = "public, max-age=5"
+    return response

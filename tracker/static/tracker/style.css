@@ -418,3 +418,80 @@ tr.overdue:hover { background: var(--alert-bg); filter: brightness(.97); }
 .page-head h1:only-child { margin-bottom: 1.25rem; }
 .head-row { margin-bottom: 1.5rem; }
 .head-row > div p { margin-bottom: 0; }
+
+
+/* ======================================================
+   Live map
+   ====================================================== */
+.content-map { max-width: none; }
+.map-layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 1rem; align-items: start; }
+.map {
+  position: relative; isolation: isolate; z-index: 0;
+  height: calc(100vh - 210px); min-height: 520px;
+  border: 1px solid var(--line); border-radius: 3px; background: #cfe0ee;
+}
+.map-side { display: flex; flex-direction: column; gap: 1rem; }
+.map-side .panel { margin: 0; padding: 1rem 1.1rem; }
+.map-side h2 { font-size: 1.05rem; margin-bottom: .75rem; }
+.muted { color: var(--muted); }
+.map-credit { margin: 0; color: var(--muted); font-size: .82rem; line-height: 1.45; }
+
+/* Status chip and notes */
+.feed-chip {
+  display: inline-flex; align-items: center; gap: .5rem; padding: .3rem .8rem;
+  border-radius: 999px; font-weight: 600; font-size: .9rem;
+  background: var(--neutral-bg); color: var(--neutral-fg);
+}
+.feed-chip::before { content: ""; width: .6rem; height: .6rem; border-radius: 50%; background: currentColor; }
+.feed-chip.is-live { background: var(--good-bg); color: var(--good-fg); }
+.feed-chip.is-live::before { animation: ping-dot 2s ease-out infinite; }
+.feed-chip.is-demo, .feed-chip.is-stale { background: var(--warn-bg); color: var(--warn-fg); }
+.feed-chip.is-error { background: var(--bad-bg); color: var(--bad-fg); }
+.feed-note { margin: 0 0 1rem; padding: .6rem .9rem; background: var(--warn-bg); color: var(--warn-fg); border-left: 4px solid var(--runway); font-weight: 500; }
+
+/* Aircraft markers */
+.plane-marker { background: none; border: 0; color: #0f2233; }
+.plane-marker.ready { transition: transform 10s linear; }
+.map.is-zooming .plane-marker.ready { transition: none; }
+.plane-rot { display: block; width: 100%; height: 100%; transition: transform .6s ease; }
+.plane-rot svg { display: block; width: 100%; height: 100%; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5)); }
+.plane-rot svg path { stroke: #ffffff; stroke-width: 3; paint-order: stroke; }
+:root[data-theme="dark"] .plane-marker { color: #dbe7f1; }
+:root[data-theme="dark"] .plane-rot svg path { stroke: #0b1722; }
+.plane-fleet { color: var(--runway) !important; }
+.plane-fleet .plane-rot svg path { stroke: #0f2233 !important; stroke-width: 4; }
+.plane-marker.is-selected .plane-rot svg { filter: drop-shadow(0 0 5px #0b5cad) drop-shadow(0 0 2px #0b5cad); }
+.plane-marker.is-selected { z-index: 2000 !important; }
+.leaflet-tooltip.fleet-label { background: #0f2233; color: #fff; border: 0; font-weight: 700; padding: .1rem .45rem; box-shadow: none; }
+.leaflet-tooltip.fleet-label::before { border-top-color: #0f2233; }
+:root[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.8); }
+.leaflet-container { font-family: inherit; }
+
+/* Side panels */
+.find-form { display: flex; gap: .5rem; }
+.find-form input { flex: 1; min-width: 0; font: inherit; padding: .55rem .7rem; border: 1px solid var(--line); border-radius: 3px; background: var(--paper); color: var(--ink); }
+.find-msg { margin: .5rem 0 0; font-size: .9rem; color: var(--muted); min-height: 1.2em; }
+
+.fleet-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.fleet-item {
+  width: 100%; font: inherit; text-align: left; cursor: pointer; color: var(--ink);
+  display: flex; justify-content: space-between; align-items: center; gap: .75rem;
+  padding: .6rem .75rem; background: var(--soft); border: 1px solid var(--line); border-left: 5px solid var(--line); border-radius: 3px;
+  transition: background-color .2s, border-color .2s, transform .2s;
+}
+.fleet-item:hover { transform: translateX(2px); border-color: var(--focus); }
+.fleet-item.is-airborne { border-left-color: var(--runway); }
+.fleet-left, .fleet-right { display: flex; flex-direction: column; gap: .1rem; font-size: .9rem; }
+.fleet-right { align-items: flex-end; }
+
+.detail-title { margin: 0; font-size: 1.4rem; font-weight: 800; font-stretch: 110%; }
+.detail-sub { margin: 0 0 .75rem; color: var(--muted); }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem 1rem; margin: 0 0 .9rem; }
+.facts dt { font-size: .78rem; color: var(--muted); }
+.facts dd { margin: 0; font-weight: 700; }
+
+@media (max-width: 1100px) {
+  .map-layout { grid-template-columns: 1fr; }
+  .map { height: 62vh; min-height: 380px; }
+}
+:root[data-theme="dark"] .map { background: #1c3550; }

@@ -6,6 +6,7 @@
     <a class="logo" href="{% url 'home' %}"><svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M32 2c2 0 3 4 3 8v14l27 14v6L35 36v14l7 6v4l-10-3-10 3v-4l7-6V36L2 44v-6l27-14V10c0-4 1-8 3-8z"/></svg> SkyLog</a>
     <nav>
       <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Dashboard</a>
+      <a href="{% url 'live_map' %}" class="{% if request.resolver_match.url_name == 'live_map' %}active{% endif %}">Live map</a>
       <a href="{% url 'aircraft_list' %}" class="{% if request.resolver_match.url_name == 'aircraft_list' or request.resolver_match.url_name == 'aircraft_detail' %}active{% endif %}">Aircraft</a>
       <a href="{% url 'task_list' %}" class="{% if request.resolver_match.url_name == 'task_list' %}active{% endif %}">Tasks</a>
       {% if user.is_staff %}<a href="/admin/">Admin</a>{% endif %}
@@ -21,7 +22,7 @@
     {% endif %}
     <p class="sidebar-foot">Aircraft maintenance tracker</p>
   </aside>
-  <main class="content">
+  <main class="content {% block main_class %}{% endblock %}">
     {% if messages %}
     <div class="messages">
       {% for message in messages %}<div class="message" role="status">{{ message }}</div>{% endfor %}

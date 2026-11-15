@@ -1,0 +1,60 @@
+{% extends "tracker/app.html" %}
+{% load static %}
+
+{% block title %}Live map{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'tracker/vendor/leaflet/leaflet.css' %}">
+{% endblock %}
+
+{% block main_class %}content-map{% endblock %}
+
+{% block content %}
+<header class="page-head head-row">
+  <div>
+    <h1>Live map</h1>
+    <p>Aircraft in the air right now. Your own fleet is highlighted in yellow.</p>
+  </div>
+  <span id="feed-status" class="feed-chip" role="status">Connecting&hellip;</span>
+</header>
+
+<p id="feed-note" class="feed-note" hidden></p>
+
+<div class="map-layout">
+  <div id="map" class="map"
+       data-tiles="{{ tile_url }}"
+       data-attribution="{{ tile_attribution }}"
+       data-feed="{% url 'aircraft_feed' %}"
+       data-aircraft-url="{% url 'aircraft_list' %}"
+       data-center="{{ center_lat }},{{ center_lon }}"
+       data-zoom="{{ start_zoom }}"></div>
+
+  <aside class="map-side">
+    <section class="panel">
+      <h2>Find an aircraft</h2>
+      <form id="find-form" class="find-form">
+        <input id="find-input" type="search" placeholder="Callsign or registration" aria-label="Callsign or registration" autocomplete="off">
+        <button class="btn-app" type="submit">Find</button>
+      </form>
+      <p id="find-msg" class="find-msg" role="status"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Your fleet</h2>
+      <ul id="fleet-list" class="fleet-list"><li class="muted">Loading&hellip;</li></ul>
+    </section>
+
+    <section class="panel">
+      <h2>Selected aircraft</h2>
+      <div id="detail" class="detail"><p class="muted">Click an aircraft on the map to see its details.</p></div>
+    </section>
+
+    <p class="map-credit">{{ data_attribution }}. Positions come from volunteer receivers, so coverage varies and data can be delayed. Not for navigation or operational decisions.</p>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'tracker/vendor/leaflet/leaflet.js' %}"></script>
+<script src="{% static 'tracker/map.js' %}"></script>
+{% endblock %}

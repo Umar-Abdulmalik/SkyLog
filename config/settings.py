@@ -149,3 +149,37 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+
+# ---------------------------------------------------------------------------
+# Live aircraft map
+# ---------------------------------------------------------------------------
+# "auto"  - try the live feed, fall back to clearly labelled simulated traffic
+# "adsb"  - live feed only (shows an error if it is unreachable)
+# "demo"  - simulated traffic only
+AIRCRAFT_PROVIDER = os.environ.get("SKYLOG_AIRCRAFT_PROVIDER", "auto")
+
+# Any provider that uses the ADS-B Exchange "v2" format works here
+# (airplanes.live, adsb.lol, adsb.fi ...). Read your provider's terms of use:
+# free community feeds are for non-commercial use.
+AIRCRAFT_API_BASE = os.environ.get("SKYLOG_AIRCRAFT_API_BASE", "https://api.airplanes.live/v2")
+AIRCRAFT_ATTRIBUTION = os.environ.get("SKYLOG_AIRCRAFT_ATTRIBUTION", "Aircraft data: airplanes.live community ADS-B network")
+AIRCRAFT_CACHE_SECONDS = 15
+AIRCRAFT_TIMEOUT = 6
+AIRCRAFT_USER_AGENT = "SkyLog/1.0 (+https://github.com/Umar-Abdulmalik/SkyLog)"
+
+# Map tiles. OpenStreetMap's public tile server is meant for light use: before
+# serving real traffic, switch to a tile provider with a proper plan.
+MAP_TILE_URL = os.environ.get("SKYLOG_MAP_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png")
+MAP_TILE_ATTRIBUTION = os.environ.get(
+    "SKYLOG_MAP_TILE_ATTRIBUTION",
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+)
+
+# A cache that is shared between all the server's worker processes
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": BASE_DIR / "cache",
+    }
+}

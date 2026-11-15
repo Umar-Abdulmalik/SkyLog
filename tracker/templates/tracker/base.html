@@ -6,6 +6,7 @@
   <title>{% block title %}Keep every aircraft airworthy{% endblock %} | SkyLog</title>
   <link rel="preload" href="{% static 'tracker/fonts/archivo.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'tracker/style.css' %}">
+  {% block extra_head %}{% endblock %}
   <script>
     (function () {
       var root = document.documentElement;
@@ -21,6 +22,7 @@
 </head>
 <body>
 {% block body %}{% endblock %}
+{% block scripts %}{% endblock %}
 <script src="{% static 'tracker/app.js' %}"></script>
 </body>
 </html>

@@ -1,8 +1,10 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.management import call_command
-from django.test import TestCase
+from unittest import mock
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -185,3 +187,199 @@ class SeedDemoTests(TestCase):
         self.assertEqual(MaintenanceTask.objects.count(), 8)
         call_command("seed_demo", verbosity=0)
         self.assertEqual(Aircraft.objects.count(), 4)
+
+
+LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
+# One record in the shape the data provider sends
+SAMPLE_FEED = {
+    "ac": [
+        {"hex": "ABC123", "flight": "ARK501 ", "r": "5n-abc", "t": "c172", "lat": 9.5,
+         "lon": 7.5, "alt_baro": 4500, "gs": 110.4, "track": 270.2, "baro_rate": 0},
+        {"hex": "def456", "flight": "AFR22", "r": "F-ABCD", "t": "A332", "lat": 8.0,
+         "lon": 6.0, "alt_baro": 36000, "gs": 480, "track": 10, "baro_rate": -64},
+        {"hex": "aaa111", "flight": "TAXI1", "lat": 9.1, "lon": 7.0, "alt_baro": "ground"},
+        {"hex": "bbb222", "flight": "NOPOS"},
+    ]
+}
+# A view of Nigeria that needs only a few grid cells
+NIGERIA = (5.0, 3.0, 12.0, 11.0)
+# A small view that needs just one grid cell
+SMALL = (5.0, 5.0, 9.9, 9.0)
+
+
+@override_settings(CACHES=LOCMEM, AIRCRAFT_PROVIDER="adsb")
+class LiveFeedTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.fleet = [
+            {"id": 1, "registration": "5N-ABC", "type": "Cessna 172", "status": "serviceable",
+             "status_label": "Serviceable", "open_tasks": 2},
+            {"id": 2, "registration": "5N-QRS", "type": "Piper", "status": "grounded",
+             "status_label": "Grounded", "open_tasks": 0},
+        ]
+        sleeper = mock.patch("tracker.live.time.sleep")
+        sleeper.start()
+        self.addCleanup(sleeper.stop)
+
+    def test_nearby_views_share_the_same_cells(self):
+        from tracker import live
+
+        self.assertEqual(
+            live.cells_for_view(5.1, 3.1, 9.8, 7.9), live.cells_for_view(5.3, 3.3, 9.6, 7.7)
+        )
+
+    def test_a_view_that_is_too_large_is_rejected(self):
+        from tracker import live
+
+        with self.assertRaises(live.TooManyCells):
+            live.cells_for_view(-30, -30, 60, 60)
+
+    def test_provider_records_are_cleaned_up(self):
+        from tracker import live
+
+        plane = live.normalise(SAMPLE_FEED["ac"][0])
+        self.assertEqual(plane["hex"], "abc123")
+        self.assertEqual(plane["callsign"], "ARK501")
+        self.assertEqual(plane["reg"], "5N-ABC")
+        self.assertEqual(plane["type"], "C172")
+        self.assertEqual((plane["alt"], plane["speed"], plane["track"]), (4500, 110, 270))
+        self.assertTrue(live.normalise(SAMPLE_FEED["ac"][2])["ground"])
+        self.assertIsNone(live.normalise(SAMPLE_FEED["ac"][3]))
+        self.assertIsNone(live.normalise("not a record"))
+
+    def test_fleet_aircraft_are_matched_and_removed_from_general_traffic(self):
+        from tracker import live
+
+        with mock.patch("tracker.live._http_get_json", return_value=SAMPLE_FEED):
+            feed = live.get_feed(SMALL, self.fleet)
+        self.assertEqual(feed["source"], "live")
+        self.assertEqual([plane["hex"] for plane in feed["aircraft"]], ["def456"])
+        in_air = {row["registration"]: row["live"] for row in feed["fleet"]}
+        self.assertEqual(in_air["5N-ABC"]["callsign"], "ARK501")
+        self.assertIsNone(in_air["5N-QRS"])
+
+    def test_ground_traffic_is_not_shown(self):
+        from tracker import live
+
+        with mock.patch("tracker.live._http_get_json", return_value=SAMPLE_FEED):
+            feed = live.get_feed(SMALL, [])
+        self.assertNotIn("aaa111", [plane["hex"] for plane in feed["aircraft"]])
+
+    def test_many_visitors_cause_one_request_to_the_provider(self):
+        from tracker import live
+
+        with mock.patch("tracker.live._http_get_json", return_value=SAMPLE_FEED) as http:
+            live.get_feed(SMALL, [])
+            calls_after_first_visitor = http.call_count
+            for _ in range(50):
+                live.get_feed(SMALL, [])
+        self.assertEqual(http.call_count, calls_after_first_visitor)
+
+    def test_old_data_is_served_when_the_provider_fails(self):
+        from tracker import live
+
+        with mock.patch("tracker.live._http_get_json", return_value=SAMPLE_FEED):
+            live.get_feed(SMALL, [])
+        for cell in live.cells_for_view(*SMALL):
+            cache.delete(live.cell_key(cell))  # the fresh copy expires
+        with mock.patch("tracker.live._http_get_json", side_effect=live.FeedError("down")):
+            feed = live.get_feed(SMALL, [])
+        self.assertEqual(feed["source"], "live-stale")
+        self.assertTrue(feed["aircraft"])
+
+    def test_live_only_mode_reports_an_error_when_the_provider_is_down(self):
+        from tracker import live
+
+        with mock.patch("tracker.live._http_get_json", side_effect=live.FeedError("down")):
+            with self.assertRaises(live.FeedError):
+                live.get_feed(NIGERIA, [])
+            response = self.client.get(
+                reverse("aircraft_feed"),
+                {"south": 5, "west": 3, "north": 12, "east": 11},
+            )
+        self.assertEqual(response.status_code, 502)
+
+    @override_settings(AIRCRAFT_PROVIDER="auto")
+    def test_auto_mode_falls_back_to_simulated_traffic_and_stops_retrying(self):
+        from tracker import live
+
+        with mock.patch("tracker.live._http_get_json", side_effect=live.FeedError("down")) as http:
+            first = live.get_feed(NIGERIA, self.fleet)
+            attempts = http.call_count
+            second = live.get_feed(NIGERIA, self.fleet)
+        self.assertEqual((first["source"], second["source"]), ("demo", "demo"))
+        self.assertEqual(http.call_count, attempts)  # no new attempts for a minute
+
+    @override_settings(AIRCRAFT_PROVIDER="demo")
+    def test_simulated_sky_has_serviceable_fleet_aircraft_only(self):
+        from tracker import live
+
+        feed = live.get_feed(NIGERIA, self.fleet)
+        self.assertEqual(feed["source"], "demo")
+        in_air = {row["registration"]: row["live"] for row in feed["fleet"]}
+        self.assertIsNotNone(in_air["5N-ABC"])
+        self.assertIsNone(in_air["5N-QRS"])  # grounded aircraft stay on the ground
+
+    def test_one_request_never_triggers_a_flood_of_provider_calls(self):
+        from tracker import live
+
+        with mock.patch("tracker.live._http_get_json", return_value=SAMPLE_FEED) as http:
+            live.get_feed(NIGERIA, [])
+            self.assertEqual(http.call_count, live.MAX_FETCHES_PER_REQUEST)
+            live.get_feed(NIGERIA, [])  # the next refresh fills in the rest
+            self.assertEqual(http.call_count, len(live.cells_for_view(*NIGERIA)))
+            live.get_feed(NIGERIA, [])
+            self.assertEqual(http.call_count, len(live.cells_for_view(*NIGERIA)))
+
+    @override_settings(AIRCRAFT_PROVIDER="demo")
+    def test_simulated_small_aircraft_fly_like_small_aircraft(self):
+        from tracker import live
+
+        fleet = [{"id": 1, "registration": "5N-ABC", "type": "Cessna 172", "status": "serviceable",
+                  "status_label": "Serviceable", "open_tasks": 0}]
+        flight = live.get_feed(NIGERIA, fleet)["fleet"][0]["live"]
+        self.assertLessEqual(flight["alt"], 9000)
+        self.assertLessEqual(flight["speed"], 130)
+
+    @override_settings(AIRCRAFT_PROVIDER="demo")
+    def test_simulated_traffic_stays_inside_the_requested_area(self):
+        from tracker import live
+
+        feed = live.get_feed((6.0, 3.0, 10.0, 9.0), [])
+        self.assertTrue(feed["aircraft"])
+        for plane in feed["aircraft"]:
+            self.assertTrue(6.0 <= plane["lat"] <= 10.0 and 3.0 <= plane["lon"] <= 9.0)
+
+
+@override_settings(CACHES=LOCMEM, AIRCRAFT_PROVIDER="demo")
+class FeedEndpointTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        Aircraft.objects.create(registration="5N-ABC", aircraft_type="Cessna 172")
+
+    def get(self, **params):
+        return self.client.get(reverse("aircraft_feed"), params)
+
+    def test_valid_request_returns_traffic_and_the_fleet(self):
+        response = self.get(south=5, west=3, north=12, east=11)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["source"], "demo")
+        self.assertEqual(data["fleet"][0]["registration"], "5N-ABC")
+        self.assertIn("Cache-Control", response)
+
+    def test_missing_or_invalid_numbers_are_rejected(self):
+        self.assertEqual(self.get().status_code, 400)
+        self.assertEqual(self.get(south="x", west=1, north=2, east=3).status_code, 400)
+        self.assertEqual(self.get(south="nan", west=1, north=2, east=3).status_code, 400)
+        self.assertEqual(self.get(south=10, west=1, north=5, east=3).status_code, 400)
+
+    def test_a_huge_area_asks_the_visitor_to_zoom_in(self):
+        response = self.get(south=-60, west=-120, north=70, east=120)
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["error"], "zoom_in")
+
+    def test_map_page_loads(self):
+        response = self.client.get(reverse("live_map"))
+        self.assertContains(response, 'id="map"')

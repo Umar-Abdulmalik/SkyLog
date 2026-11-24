@@ -495,3 +495,46 @@ tr.overdue:hover { background: var(--alert-bg); filter: brightness(.97); }
   .map { height: 62vh; min-height: 380px; }
 }
 :root[data-theme="dark"] .map { background: #1c3550; }
+
+
+/* ======================================================
+   Sidebar handle and full screen map
+   ====================================================== */
+.layout { transition: grid-template-columns .3s ease; }
+.sidebar-handle {
+  position: fixed; top: 50%; left: 230px; z-index: 30;
+  width: 24px; height: 64px; margin-left: -12px; padding: 0;
+  display: grid; place-items: center; cursor: pointer;
+  background: var(--sidebar); color: #fff;
+  border: 1px solid rgba(255, 255, 255, .28); border-radius: 12px;
+  transform: translateY(-50%);
+  transition: left .3s ease, margin-left .3s ease, background-color .2s;
+}
+.sidebar-handle:hover { background: var(--focus); }
+.sidebar-handle svg { width: 16px; height: 16px; transition: transform .3s; }
+.sidebar-collapsed .layout { grid-template-columns: 0 minmax(0, 1fr); }
+.sidebar-collapsed .sidebar { padding-left: 0; padding-right: 0; visibility: hidden; transition: visibility 0s .3s; }
+.sidebar-collapsed .sidebar-handle { left: 0; margin-left: 0; border-radius: 0 12px 12px 0; }
+.sidebar-collapsed .sidebar-handle svg { transform: rotate(180deg); }
+
+.no-scroll { overflow: hidden; }
+.map-layout:fullscreen { background: var(--paper); padding: 1rem; height: 100vh; align-items: stretch; }
+.map-layout:fullscreen .map { height: calc(100vh - 2rem); }
+.map-layout:fullscreen .map-side { max-height: calc(100vh - 2rem); overflow-y: auto; }
+.map-layout:-webkit-full-screen { background: var(--paper); padding: 1rem; height: 100vh; align-items: stretch; }
+.map-layout:-webkit-full-screen .map { height: calc(100vh - 2rem); }
+.map-layout:-webkit-full-screen .map-side { max-height: calc(100vh - 2rem); overflow-y: auto; }
+.map-layout.is-expanded { position: fixed; inset: 0; z-index: 3000; background: var(--paper); padding: 1rem; align-items: stretch; }
+.map-layout.is-expanded .map { height: calc(100vh - 2rem); }
+.map-layout.is-expanded .map-side { max-height: calc(100vh - 2rem); overflow-y: auto; }
+
+@media (max-width: 860px) {
+  .sidebar-handle { display: none; }
+  .sidebar-collapsed .layout { grid-template-columns: minmax(0, 1fr); }
+  .sidebar-collapsed .sidebar { padding: 1rem; visibility: visible; }
+}
+@media (max-width: 1100px) {
+  .map-layout:fullscreen, .map-layout.is-expanded { grid-template-columns: 1fr; overflow-y: auto; }
+  .map-layout:fullscreen .map, .map-layout.is-expanded .map { height: 58vh; min-height: 320px; }
+  .map-layout:fullscreen .map-side, .map-layout.is-expanded .map-side { max-height: none; }
+}

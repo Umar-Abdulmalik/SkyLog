@@ -103,7 +103,7 @@ def _http_get_json(url):
         },
     )
     try:
-        with urlopen(request, timeout=_setting("AIRCRAFT_TIMEOUT", 6)) as response:
+        with urlopen(request, timeout=_setting("AIRCRAFT_TIMEOUT", 10)) as response:
             return json.loads(response.read().decode("utf-8"))
     except (URLError, OSError, ValueError) as error:
         raise FeedError(str(error)) from error
@@ -146,20 +146,46 @@ def normalise(raw):
 
 
 def _parse_feed(data):
-    records = data.get("ac") if isinstance(data, dict) else None
-    if not isinstance(records, list):
+    """Read a provider response. Most use an "ac" list; some (for example the
+    older adsb.fi address) call it "aircraft". The records look the same."""
+    records = None
+    if isinstance(data, dict):
+        for name in ("ac", "aircraft"):
+            if isinstance(data.get(name), list):
+                records = data[name]
+                break
+    if records is None:
         raise FeedError("The data provider sent an unexpected response.")
     return [item for item in map(normalise, records) if item]
 
 
-def fetch_cell(cell):
-    lat, lon = cell_centre(cell)
+def _api_url(path_setting, default_path, **values):
+    """Build a provider URL. Providers share one data format but name their
+    endpoints differently, so the path pattern is a setting."""
     base = _setting("AIRCRAFT_API_BASE", "https://api.airplanes.live/v2").rstrip("/")
-    return _parse_feed(_http_get_json(f"{base}/point/{lat:.3f}/{lon:.3f}/{CELL_RADIUS_NM}"))
+    path = _setting(path_setting, default_path).format(**values)
+    return f"{base}/{path}"
+
+
+def cell_url(cell):
+    lat, lon = cell_centre(cell)
+    return _api_url(
+        "AIRCRAFT_POINT_PATH", "point/{lat}/{lon}/{radius}",
+        lat=f"{lat:.3f}", lon=f"{lon:.3f}", radius=CELL_RADIUS_NM,
+    )
+
+
+def registrations_url(registrations):
+    return _api_url(
+        "AIRCRAFT_REG_PATH", "reg/{regs}", regs=quote(",".join(registrations), safe=",")
+    )
+
+
+def fetch_cell(cell):
+    return _parse_feed(_http_get_json(cell_url(cell)))
 
 
 def fetch_registrations(registrations):
-    base = _setting("AIRCRAFT_API_BASE", "https://api.airplanes.live/v2").rstrip("/")
     found = []
     chunk, size = [], 0
     for reg in registrations + [None]:  # None flushes the last chunk
@@ -168,8 +194,7 @@ def fetch_registrations(registrations):
             size += len(reg) + 1
             continue
         if chunk:
-            url = f"{base}/reg/{quote(','.join(chunk), safe=',')}"
-            found.extend(_parse_feed(_http_get_json(url)))
+            found.extend(_parse_feed(_http_get_json(registrations_url(chunk))))
         chunk, size = ([reg], len(reg) + 1) if reg is not None else ([], 0)
     return found
 
@@ -374,16 +399,22 @@ def get_feed(view, fleet):
     live_allowed = provider == "adsb" or (provider == "auto" and not cache.get(DOWN_KEY))
     if live_allowed:
         try:
-            traffic, traffic_stale, traffic_time = live_traffic(cells)
-            fleet_flights, fleet_stale, fleet_time = live_fleet(registrations)
-            source = "live-stale" if (traffic_stale or fleet_stale) else "live"
-            updated = max(traffic_time, fleet_time)
+            traffic, traffic_stale, updated = live_traffic(cells)
         except FeedError as error:
             log.warning("Live aircraft feed unavailable: %s", error)
             if provider == "adsb":
                 raise
             cache.set(DOWN_KEY, 1, LIVE_DOWN_SECONDS)
-            traffic = None
+        else:
+            fleet_flights, fleet_stale = [], False
+            if _setting("AIRCRAFT_FLEET_LOOKUP", "list") == "list":
+                try:
+                    fleet_flights, fleet_stale, fleet_time = live_fleet(registrations)
+                    updated = max(updated, fleet_time)
+                except FeedError as error:
+                    # The map still works: fleet aircraft are found in the traffic instead
+                    log.warning("Fleet lookup unavailable, using map traffic only: %s", error)
+            source = "live-stale" if (traffic_stale or fleet_stale) else "live"
 
     if traffic is None:
         now = time.time()
@@ -403,9 +434,15 @@ def get_feed(view, fleet):
     visible.sort(key=lambda flight: -(flight["alt"] or 0))
     visible = visible[:MAX_AIRCRAFT]
 
+    # Fleet aircraft are found in the map traffic, and by a direct lookup when enabled
     by_registration = {
-        flight["reg"]: flight for flight in fleet_flights if flight["reg"] and not flight["ground"]
+        flight["reg"]: flight
+        for flight in traffic
+        if flight["reg"] in fleet_regs and not flight["ground"]
     }
+    by_registration.update(
+        {flight["reg"]: flight for flight in fleet_flights if flight["reg"] and not flight["ground"]}
+    )
     fleet_out = []
     for row in fleet:
         flight = by_registration.get(row["registration"].upper())

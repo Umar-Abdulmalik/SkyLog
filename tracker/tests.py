@@ -173,6 +173,10 @@ class EditingTests(TestCase):
         self.client.force_login(self.user)
         self.assertContains(self.client.get(page), "Add task")
 
+    def test_app_pages_have_a_sidebar_handle_and_the_map_has_full_screen(self):
+        self.assertContains(self.client.get(reverse("dashboard")), 'id="sidebar-handle"')
+        self.assertContains(self.client.get(reverse("live_map")), 'id="fullscreen-btn"')
+
     def test_login_page_loads_and_logout_redirects_home(self):
         self.assertEqual(self.client.get(reverse("login")).status_code, 200)
         self.client.force_login(self.user)
@@ -332,6 +336,77 @@ class LiveFeedTests(TestCase):
             live.get_feed(NIGERIA, [])
             self.assertEqual(http.call_count, len(live.cells_for_view(*NIGERIA)))
 
+    @override_settings(
+        AIRCRAFT_API_BASE="https://opendata.adsb.fi/api",
+        AIRCRAFT_POINT_PATH="v3/lat/{lat}/lon/{lon}/dist/{radius}",
+        AIRCRAFT_REG_PATH="v2/registration/{regs}",
+    )
+    def test_provider_address_style_is_configurable(self):
+        from tracker import live
+
+        with mock.patch("tracker.live._http_get_json", return_value=SAMPLE_FEED) as http:
+            live.fetch_cell((19, 36))
+            live.fetch_registrations(["5N-ABC", "5N-QRS"])
+        urls = [call.args[0] for call in http.call_args_list]
+        self.assertEqual(urls[0], "https://opendata.adsb.fi/api/v3/lat/7.500/lon/2.500/dist/215")
+        self.assertEqual(urls[1], "https://opendata.adsb.fi/api/v2/registration/5N-ABC,5N-QRS")
+
+    def test_default_address_style_matches_airplanes_live(self):
+        from tracker import live
+
+        with mock.patch("tracker.live._http_get_json", return_value=SAMPLE_FEED) as http:
+            live.fetch_cell((19, 36))
+            live.fetch_registrations(["5N-ABC"])
+        urls = [call.args[0] for call in http.call_args_list]
+        self.assertEqual(urls[0], "https://api.airplanes.live/v2/point/7.500/2.500/215")
+        self.assertEqual(urls[1], "https://api.airplanes.live/v2/reg/5N-ABC")
+
+    def test_both_response_formats_are_understood(self):
+        from tracker import live
+
+        self.assertEqual(len(live._parse_feed({"ac": SAMPLE_FEED["ac"]})), 3)
+        self.assertEqual(len(live._parse_feed({"aircraft": SAMPLE_FEED["ac"], "now": 1})), 3)
+        self.assertEqual(live._parse_feed({"aircraft": []}), [])
+        with self.assertRaises(live.FeedError):
+            live._parse_feed({"nothing": "here"})
+
+    def test_a_failed_fleet_lookup_does_not_turn_the_map_into_a_simulation(self):
+        from tracker import live
+
+        def answer(url):
+            if "/reg/" in url:
+                raise live.FeedError("HTTP Error 404: Not Found")
+            return SAMPLE_FEED
+
+        with mock.patch("tracker.live._http_get_json", side_effect=answer):
+            feed = live.get_feed(SMALL, self.fleet)
+        self.assertEqual(feed["source"], "live")
+        in_air = {row["registration"]: row["live"] for row in feed["fleet"]}
+        self.assertEqual(in_air["5N-ABC"]["callsign"], "ARK501")  # found in the map traffic
+
+    @override_settings(AIRCRAFT_FLEET_LOOKUP="none")
+    def test_fleet_lookup_can_be_switched_off(self):
+        from tracker import live
+
+        with mock.patch("tracker.live._http_get_json", return_value=SAMPLE_FEED) as http:
+            feed = live.get_feed(SMALL, self.fleet)
+        self.assertFalse(any("/reg/" in call.args[0] for call in http.call_args_list))
+        self.assertIsNotNone({row["registration"]: row["live"] for row in feed["fleet"]}["5N-ABC"])
+
+    def test_check_feed_command_reports_what_the_feed_sends(self):
+        from io import StringIO
+
+        out = StringIO()
+        with mock.patch("tracker.live._http_get_json", return_value={"aircraft": SAMPLE_FEED["ac"]}):
+            call_command("check_feed", stdout=out)
+        self.assertIn("aircraft understood", out.getvalue())
+        self.assertIn("Top-level fields: aircraft", out.getvalue())
+
+        out = StringIO()
+        with mock.patch("tracker.live._http_get_json", side_effect=__import__("tracker.live").live.FeedError("HTTP Error 403: Forbidden")):
+            call_command("check_feed", stdout=out)
+        self.assertIn("FAILED: HTTP Error 403: Forbidden", out.getvalue())
+
     @override_settings(AIRCRAFT_PROVIDER="demo")
     def test_simulated_small_aircraft_fly_like_small_aircraft(self):
         from tracker import live
@@ -383,3 +458,11 @@ class FeedEndpointTests(TestCase):
     def test_map_page_loads(self):
         response = self.client.get(reverse("live_map"))
         self.assertContains(response, 'id="map"')
+
+    @override_settings(
+        AIRCRAFT_ATTRIBUTION="Aircraft data: adsb.fi", AIRCRAFT_ATTRIBUTION_URL="https://adsb.fi"
+    )
+    def test_map_page_credits_the_data_provider_with_a_link(self):
+        response = self.client.get(reverse("live_map"))
+        self.assertContains(response, '<a href="https://adsb.fi"')
+        self.assertContains(response, "Aircraft data: adsb.fi")

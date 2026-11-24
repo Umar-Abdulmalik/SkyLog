@@ -244,6 +244,7 @@ def live_map(request):
         "tile_url": settings.MAP_TILE_URL,
         "tile_attribution": settings.MAP_TILE_ATTRIBUTION,
         "data_attribution": settings.AIRCRAFT_ATTRIBUTION,
+        "data_attribution_url": settings.AIRCRAFT_ATTRIBUTION_URL,
         "center_lat": 9.1,
         "center_lon": 8.0,
         "start_zoom": 7,

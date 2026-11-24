@@ -25,6 +25,30 @@
     greeting.textContent = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   }
 
+  /* Sidebar handle: hide the sidebar for more room, remembered between visits */
+  var handle = document.getElementById("sidebar-handle");
+  function setSidebar(collapsed) {
+    root.classList.toggle("sidebar-collapsed", collapsed);
+    if (handle) {
+      handle.setAttribute("aria-expanded", String(!collapsed));
+      handle.setAttribute("aria-label", collapsed ? "Show sidebar" : "Hide sidebar");
+      handle.title = (collapsed ? "Show sidebar" : "Hide sidebar") + " (press [ )";
+    }
+    try { localStorage.setItem("sidebar", collapsed ? "collapsed" : "open"); } catch (e) {}
+  }
+  if (handle) {
+    setSidebar(root.classList.contains("sidebar-collapsed"));
+    handle.addEventListener("click", function () {
+      setSidebar(!root.classList.contains("sidebar-collapsed"));
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "[" || e.ctrlKey || e.metaKey || e.altKey) { return; }
+      var t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) { return; }
+      setSidebar(!root.classList.contains("sidebar-collapsed"));
+    });
+  }
+
   if (reduce || !("IntersectionObserver" in window)) { return; }
 
   /* Reveal sections as they scroll into view */

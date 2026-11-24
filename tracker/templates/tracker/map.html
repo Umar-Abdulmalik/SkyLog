@@ -15,7 +15,10 @@
     <h1>Live map</h1>
     <p>Aircraft in the air right now. Your own fleet is highlighted in yellow.</p>
   </div>
-  <span id="feed-status" class="feed-chip" role="status">Connecting&hellip;</span>
+  <div class="head-actions">
+    <button id="fullscreen-btn" class="btn-app btn-quiet" type="button">Full screen</button>
+    <span id="feed-status" class="feed-chip" role="status">Connecting&hellip;</span>
+  </div>
 </header>
 
 <p id="feed-note" class="feed-note" hidden></p>
@@ -49,7 +52,7 @@
       <div id="detail" class="detail"><p class="muted">Click an aircraft on the map to see its details.</p></div>
     </section>
 
-    <p class="map-credit">{{ data_attribution }}. Positions come from volunteer receivers, so coverage varies and data can be delayed. Not for navigation or operational decisions.</p>
+    <p class="map-credit">{% if data_attribution_url %}<a href="{{ data_attribution_url }}" target="_blank" rel="noopener">{{ data_attribution }}</a>{% else %}{{ data_attribution }}{% endif %}. Positions come from volunteer receivers, so coverage varies and data can be delayed. Not for navigation or operational decisions.</p>
   </aside>
 </div>
 {% endblock %}

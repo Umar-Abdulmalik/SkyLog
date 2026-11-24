@@ -14,6 +14,7 @@
       try { t = localStorage.getItem("theme"); } catch (e) {}
       if (!t) { t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; }
       root.setAttribute("data-theme", t);
+      try { if (localStorage.getItem("sidebar") === "collapsed") { root.classList.add("sidebar-collapsed"); } } catch (e) {}
       if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches && "IntersectionObserver" in window) {
         root.classList.add("js");
       }

@@ -27,6 +27,46 @@
     attribution: mapEl.getAttribute("data-attribution")
   }).addTo(map);
 
+  window.skylogMap = map;
+
+  /* Keep the map correctly sized when the sidebar or full screen changes the layout */
+  if ("ResizeObserver" in window) {
+    new ResizeObserver(function () { map.invalidateSize(); }).observe(mapEl);
+  }
+
+  /* Full screen: use the browser's full screen when available, otherwise fill the window */
+  var layoutEl = document.querySelector(".map-layout");
+  var fsBtn = document.getElementById("fullscreen-btn");
+  function isFull() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement) || layoutEl.classList.contains("is-expanded");
+  }
+  function syncFsLabel() { fsBtn.textContent = isFull() ? "Exit full screen" : "Full screen"; }
+  function setExpanded(on) {
+    layoutEl.classList.toggle("is-expanded", on);
+    document.body.classList.toggle("no-scroll", on);
+    syncFsLabel();
+    setTimeout(function () { map.invalidateSize(); }, 60);
+  }
+  fsBtn.addEventListener("click", function () {
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      return;
+    }
+    if (layoutEl.classList.contains("is-expanded")) { setExpanded(false); return; }
+    var request = layoutEl.requestFullscreen || layoutEl.webkitRequestFullscreen;
+    if (request) {
+      var result = request.call(layoutEl);
+      if (result && result.catch) { result.catch(function () { setExpanded(true); }); }
+    } else {
+      setExpanded(true);
+    }
+  });
+  document.addEventListener("fullscreenchange", syncFsLabel);
+  document.addEventListener("webkitfullscreenchange", syncFsLabel);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && layoutEl.classList.contains("is-expanded")) { setExpanded(false); }
+  });
+
   var markers = {};   // key -> Leaflet marker
   var planes = {};    // key -> { plane, fleet }
   var selectedKey = null;

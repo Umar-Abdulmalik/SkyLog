@@ -163,9 +163,20 @@ AIRCRAFT_PROVIDER = os.environ.get("SKYLOG_AIRCRAFT_PROVIDER", "auto")
 # (airplanes.live, adsb.lol, adsb.fi ...). Read your provider's terms of use:
 # free community feeds are for non-commercial use.
 AIRCRAFT_API_BASE = os.environ.get("SKYLOG_AIRCRAFT_API_BASE", "https://api.airplanes.live/v2")
+# Providers use the same data format but name their endpoints differently.
+# airplanes.live and adsb.lol use the defaults below. adsb.fi needs:
+#   SKYLOG_AIRCRAFT_API_BASE       = https://opendata.adsb.fi/api
+#   SKYLOG_AIRCRAFT_POINT_PATH     = v3/lat/{lat}/lon/{lon}/dist/{radius}
+#   SKYLOG_AIRCRAFT_FLEET_LOOKUP   = none
+# ("none" finds your fleet in the map traffic instead of asking the provider
+# by registration, which adsb.fi only supports one aircraft at a time.)
+AIRCRAFT_POINT_PATH = os.environ.get("SKYLOG_AIRCRAFT_POINT_PATH", "point/{lat}/{lon}/{radius}")
+AIRCRAFT_REG_PATH = os.environ.get("SKYLOG_AIRCRAFT_REG_PATH", "reg/{regs}")
+AIRCRAFT_FLEET_LOOKUP = os.environ.get("SKYLOG_AIRCRAFT_FLEET_LOOKUP", "list")  # "list" or "none"
 AIRCRAFT_ATTRIBUTION = os.environ.get("SKYLOG_AIRCRAFT_ATTRIBUTION", "Aircraft data: airplanes.live community ADS-B network")
+AIRCRAFT_ATTRIBUTION_URL = os.environ.get("SKYLOG_AIRCRAFT_ATTRIBUTION_URL", "https://airplanes.live")
 AIRCRAFT_CACHE_SECONDS = 15
-AIRCRAFT_TIMEOUT = 6
+AIRCRAFT_TIMEOUT = 10
 AIRCRAFT_USER_AGENT = "SkyLog/1.0 (+https://github.com/Umar-Abdulmalik/SkyLog)"
 
 # Map tiles. OpenStreetMap's public tile server is meant for light use: before

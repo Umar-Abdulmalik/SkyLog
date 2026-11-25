@@ -459,6 +459,38 @@ class FeedEndpointTests(TestCase):
         response = self.client.get(reverse("live_map"))
         self.assertContains(response, 'id="map"')
 
+    def test_diagnostics_are_for_staff_only(self):
+        self.assertEqual(self.client.get(reverse("aircraft_diagnostics")).status_code, 403)
+        user = get_user_model().objects.create_user("visitor", password="pass12345")
+        self.client.force_login(user)
+        self.assertEqual(self.client.get(reverse("aircraft_diagnostics")).status_code, 403)
+
+    def test_staff_can_see_settings_last_error_and_run_a_live_test(self):
+        from tracker import live
+
+        staff = get_user_model().objects.create_user("boss", password="pass12345", is_staff=True)
+        self.client.force_login(staff)
+        live._remember_error(live.FeedError("HTTP Error 429: Too Many Requests"))
+        report = self.client.get(reverse("aircraft_diagnostics")).json()
+        self.assertEqual(report["last_error"]["message"], "HTTP Error 429: Too Many Requests")
+        self.assertIn("example_request", report)
+        self.assertNotIn("SECRET", str(report).upper())
+
+        with mock.patch("tracker.live._http_get_json", return_value={"ac": []}):
+            report = self.client.get(reverse("aircraft_diagnostics"), {"test": 1}).json()
+        self.assertTrue(report["live_test"]["ok"])
+        with mock.patch("tracker.live._http_get_json", side_effect=live.FeedError("HTTP Error 403: Forbidden")):
+            report = self.client.get(reverse("aircraft_diagnostics"), {"test": 1}).json()
+        self.assertEqual(report["live_test"]["error"], "HTTP Error 403: Forbidden")
+
+    def test_feed_errors_are_remembered_for_diagnostics(self):
+        from tracker import live
+
+        with override_settings(AIRCRAFT_PROVIDER="auto"):
+            with mock.patch("tracker.live._http_get_json", side_effect=live.FeedError("HTTP Error 403: Forbidden")):
+                live.get_feed(SMALL, [])
+        self.assertEqual(cache.get(live.LAST_ERROR_KEY)["message"], "HTTP Error 403: Forbidden")
+
     @override_settings(
         AIRCRAFT_ATTRIBUTION="Aircraft data: adsb.fi", AIRCRAFT_ATTRIBUTION_URL="https://adsb.fi"
     )

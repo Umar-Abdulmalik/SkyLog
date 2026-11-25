@@ -302,3 +302,15 @@ def aircraft_feed(request):
     response = JsonResponse(payload)
     response["Cache-Control"] = "public, max-age=5"
     return response
+
+
+def aircraft_diagnostics(request):
+    """Staff only: what settings is the live feed using, and does it work from here?"""
+    if not request.user.is_staff:
+        return JsonResponse({"error": "forbidden", "message": "Staff only."}, status=403)
+    report = live.diagnostics()
+    if request.GET.get("test"):
+        report["live_test"] = live.live_test()
+    response = JsonResponse(report, json_dumps_params={"indent": 2})
+    response["Cache-Control"] = "no-store"
+    return response

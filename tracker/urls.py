@@ -12,6 +12,7 @@ urlpatterns = [
     path("aircraft/<int:pk>/edit/", views.AircraftUpdateView.as_view(), name="aircraft_edit"),
     path("map/", views.live_map, name="live_map"),
     path("api/aircraft/", views.aircraft_feed, name="aircraft_feed"),
+    path("api/aircraft/diagnostics/", views.aircraft_diagnostics, name="aircraft_diagnostics"),
     path("tasks/", views.task_list, name="task_list"),
     path("tasks/new/", views.TaskCreateView.as_view(), name="task_create"),
     path("tasks/<int:pk>/edit/", views.TaskUpdateView.as_view(), name="task_edit"),

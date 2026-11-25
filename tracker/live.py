@@ -39,6 +39,7 @@ LIVE_DOWN_SECONDS = 60
 MIN_SECONDS_BETWEEN_CALLS = 1.1
 DOWN_KEY = "aircraft:live-down"
 LAST_CALL_KEY = "aircraft:last-call"
+LAST_ERROR_KEY = "aircraft:last-error"
 
 PUBLIC_FIELDS = ("hex", "callsign", "reg", "type", "lat", "lon", "alt", "speed", "track", "vrate")
 
@@ -202,6 +203,42 @@ def fetch_registrations(registrations):
 # ---------------------------------------------------------------------------
 # Caching, rate limiting and sharing
 # ---------------------------------------------------------------------------
+
+
+def _remember_error(error):
+    """Keep the latest feed problem so the staff diagnostics page can show it."""
+    cache.set(LAST_ERROR_KEY, {"time": int(time.time()), "message": str(error)[:300]}, 3600)
+
+
+def diagnostics():
+    """What the running website is actually using (contains no secrets)."""
+    cells = cells_for_view(5, 3, 12, 11)
+    return {
+        "provider": _setting("AIRCRAFT_PROVIDER", "auto"),
+        "api_base": _setting("AIRCRAFT_API_BASE", ""),
+        "point_path": _setting("AIRCRAFT_POINT_PATH", ""),
+        "fleet_lookup": _setting("AIRCRAFT_FLEET_LOOKUP", "list"),
+        "example_request": cell_url(cells[0]),
+        "live_paused_for_a_minute": bool(cache.get(DOWN_KEY)),
+        "last_error": cache.get(LAST_ERROR_KEY),
+        "production_mode": _setting("PRODUCTION", None),
+    }
+
+
+def live_test():
+    """Make one real request from the running website and report what happened."""
+    url = cell_url(cells_for_view(5, 3, 12, 11)[0])
+    started = time.time()
+    try:
+        raw = _http_get_json(url)
+        aircraft = _parse_feed(raw)
+    except FeedError as error:
+        return {"ok": False, "url": url, "error": str(error), "seconds": round(time.time() - started, 2)}
+    return {
+        "ok": True, "url": url, "aircraft_in_area": len(aircraft),
+        "top_level_fields": sorted(raw) if isinstance(raw, dict) else None,
+        "seconds": round(time.time() - started, 2),
+    }
 
 
 def _respect_rate_limit():
@@ -402,6 +439,7 @@ def get_feed(view, fleet):
             traffic, traffic_stale, updated = live_traffic(cells)
         except FeedError as error:
             log.warning("Live aircraft feed unavailable: %s", error)
+            _remember_error(error)
             if provider == "adsb":
                 raise
             cache.set(DOWN_KEY, 1, LIVE_DOWN_SECONDS)
@@ -414,6 +452,7 @@ def get_feed(view, fleet):
                 except FeedError as error:
                     # The map still works: fleet aircraft are found in the traffic instead
                     log.warning("Fleet lookup unavailable, using map traffic only: %s", error)
+                    _remember_error(error)
             source = "live-stale" if (traffic_stale or fleet_stale) else "live"
 
     if traffic is None:

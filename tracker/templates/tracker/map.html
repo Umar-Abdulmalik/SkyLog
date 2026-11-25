@@ -29,7 +29,8 @@
        data-attribution="{{ tile_attribution }}"
        data-feed="{% url 'aircraft_feed' %}"
        data-aircraft-url="{% url 'aircraft_list' %}"
-       data-center="{{ center_lat }},{{ center_lon }}"
+{% if user.is_staff %}       data-diagnostics="{% url 'aircraft_diagnostics' %}?test=1"
+{% endif %}       data-center="{{ center_lat }},{{ center_lon }}"
        data-zoom="{{ start_zoom }}"></div>
 
   <aside class="map-side">

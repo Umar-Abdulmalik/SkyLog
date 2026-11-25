@@ -263,9 +263,20 @@
     statusEl.textContent = text;
   }
 
-  function showNote(text) {
-    if (text) { noteEl.textContent = text; noteEl.hidden = false; }
-    else { noteEl.hidden = true; }
+  var diagnosticsUrl = mapEl.getAttribute("data-diagnostics");
+
+  function showNote(text, withDiagnostics) {
+    if (!text) { noteEl.hidden = true; return; }
+    noteEl.textContent = text;
+    if (withDiagnostics && diagnosticsUrl) {
+      var link = el("a", null, "Staff: see why");
+      link.href = diagnosticsUrl;
+      link.target = "_blank";
+      link.rel = "noopener";
+      noteEl.appendChild(document.createTextNode(" "));
+      noteEl.appendChild(link);
+    }
+    noteEl.hidden = false;
   }
 
   function renderStatus() {
@@ -273,7 +284,7 @@
     var planesText = status.count + " aircraft";
     if (status.source === "demo") {
       setChip("demo", "Simulated traffic \u00b7 " + planesText);
-      showNote("Live data is not connected on this server, so you are seeing simulated traffic. Your fleet details are real.");
+      showNote("Live data is not connected on this server, so you are seeing simulated traffic. Your fleet details are real.", true);
     } else {
       var age = Math.max(0, Math.round(Date.now() / 1000 - status.updated));
       var label = status.source === "live-stale" ? "Delayed" : "Live";

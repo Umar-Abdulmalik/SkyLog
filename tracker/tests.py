@@ -177,6 +177,11 @@ class EditingTests(TestCase):
         self.assertContains(self.client.get(reverse("dashboard")), 'id="sidebar-handle"')
         self.assertContains(self.client.get(reverse("live_map")), 'id="fullscreen-btn"')
 
+    def test_the_sidebar_handle_sits_outside_the_page_grid_and_has_a_fixed_icon_size(self):
+        html = self.client.get(reverse("dashboard")).content.decode()
+        self.assertGreater(html.index('id="sidebar-handle"'), html.index("</aside>"))
+        self.assertIn('width="16" height="16"', html)
+
     def test_login_page_loads_and_logout_redirects_home(self):
         self.assertEqual(self.client.get(reverse("login")).status_code, 200)
         self.client.force_login(self.user)
@@ -474,6 +479,7 @@ class FeedEndpointTests(TestCase):
         report = self.client.get(reverse("aircraft_diagnostics")).json()
         self.assertEqual(report["last_error"]["message"], "HTTP Error 429: Too Many Requests")
         self.assertIn("example_request", report)
+        self.assertIn("static_files", report)
         self.assertNotIn("SECRET", str(report).upper())
 
         with mock.patch("tracker.live._http_get_json", return_value={"ac": []}):

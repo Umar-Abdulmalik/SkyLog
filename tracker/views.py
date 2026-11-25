@@ -1,4 +1,6 @@
+import hashlib
 import math
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -304,11 +306,36 @@ def aircraft_feed(request):
     return response
 
 
+def _static_files_check():
+    """Compare the stylesheet in the code with the copy the web server serves."""
+    from django.contrib.staticfiles import finders
+
+    source = finders.find("tracker/style.css")
+    root = getattr(settings, "STATIC_ROOT", None)
+    if not source or not root:
+        return None
+    collected = Path(root) / "tracker" / "style.css"
+    if not collected.exists():
+        return {"up_to_date": False, "advice": "Run: python manage.py collectstatic --noinput"}
+
+    def fingerprint(path):
+        return hashlib.sha1(Path(path).read_bytes()).hexdigest()[:10]
+
+    same = fingerprint(source) == fingerprint(collected)
+    return {
+        "code_version": fingerprint(source),
+        "served_version": fingerprint(collected),
+        "up_to_date": same,
+        "advice": "Fine." if same else "The served stylesheet is old. Run: python manage.py collectstatic --noinput, then Reload.",
+    }
+
+
 def aircraft_diagnostics(request):
     """Staff only: what settings is the live feed using, and does it work from here?"""
     if not request.user.is_staff:
         return JsonResponse({"error": "forbidden", "message": "Staff only."}, status=403)
     report = live.diagnostics()
+    report["static_files"] = _static_files_check()
     if request.GET.get("test"):
         report["live_test"] = live.live_test()
     response = JsonResponse(report, json_dumps_params={"indent": 2})

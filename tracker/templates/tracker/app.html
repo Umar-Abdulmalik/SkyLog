@@ -2,9 +2,6 @@
 
 {% block body %}
 <div class="layout">
-  <button class="sidebar-handle" type="button" id="sidebar-handle" aria-controls="sidebar" aria-expanded="true" aria-label="Hide sidebar" title="Hide sidebar (press [ )">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </button>
   <aside class="sidebar" id="sidebar">
     <a class="logo" href="{% url 'home' %}"><svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M32 2c2 0 3 4 3 8v14l27 14v6L35 36v14l7 6v4l-10-3-10 3v-4l7-6V36L2 44v-6l27-14V10c0-4 1-8 3-8z"/></svg> SkyLog</a>
     <nav>
@@ -34,4 +31,7 @@
     {% block content %}{% endblock %}
   </main>
 </div>
+<button class="sidebar-handle" type="button" id="sidebar-handle" aria-controls="sidebar" aria-expanded="true" aria-label="Hide sidebar" title="Hide sidebar (press [ )">
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
 {% endblock %}

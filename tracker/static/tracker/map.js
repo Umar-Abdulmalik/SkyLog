@@ -297,6 +297,10 @@
 
   function fetchFeed() {
     if (document.hidden) { return; }
+    if (mapEl.clientWidth < 50 || mapEl.clientHeight < 50) {
+      map.invalidateSize();   // the page layout is still settling, try again shortly
+      return;
+    }
     if (inFlight) { inFlight.abort(); }
     var bounds = map.getBounds();
     var url = feedUrl +

@@ -1,11 +1,17 @@
 # SkyLog: Aircraft Maintenance Tracker
+**Live demo: https://abdulmalik101.pythonanywhere.com**
 
+![Live](docs/Live.png)
+![Home](docs/Home.png)
 A web app for tracking an aircraft fleet and its maintenance work, built with
 Python and Django. It has a public landing page, a live dashboard, and a
 login-protected editor for adding and updating records.
 
 ## Features
-
+- Live aircraft map with real-time ADS-B traffic and your own fleet highlighted
+- One shared, cached data feed for all visitors, so many people can use it at once without hitting the provider's rate limit
+- Falls back to clearly labelled simulated traffic if the live feed is unavailable
+- Hide-able sidebar and full screen map
 - Landing page with an animated radar showing the fleet
 - Dashboard with stat cards, a fleet status donut chart, priority bars and a "Next due" list
 - Overdue maintenance highlighted in red automatically
@@ -16,7 +22,6 @@ login-protected editor for adding and updating records.
 - Light and dark mode, and a layout that works on phones
 - 22 automated tests
 ![Home page](docs/home.png)
-![Dashboard](docs/dashboard.png)
 
 ## Tech stack
 
@@ -39,6 +44,21 @@ python manage.py runserver
 
 Open http://127.0.0.1:8000/ and log in with the account you just created to
 add aircraft and tasks.
+
+## Live aircraft data
+
+The map reads ADS-B positions from [adsb.fi](https://adsb.fi) open data (personal,
+non-commercial use). The server fetches each map area once every few seconds and
+shares it between all visitors. Settings are read from environment variables, so
+no keys or secrets are stored in the code:
+
+| Variable | Purpose |
+|---|---|
+| `SKYLOG_AIRCRAFT_API_BASE` | Provider address |
+| `SKYLOG_AIRCRAFT_POINT_PATH` | Provider's area-search path |
+| `SKYLOG_AIRCRAFT_FLEET_LOOKUP` | `list` or `none` |
+
+Run `python manage.py check_feed` to test the feed from any machine.
 
 ## Running the tests
 
